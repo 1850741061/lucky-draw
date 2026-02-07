@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Sparkles, Dices, ArrowRight, Github, Twitter, Heart } from 'lucide-react';
+import { Sparkles, Dices, ArrowRight, Github, Twitter, Heart, X, HelpCircle, RotateCcw, Users, BarChart3 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import WheelPage from './pages/WheelPage';
 import DrawPage from './pages/DrawPage';
 
@@ -7,6 +8,7 @@ type Page = 'home' | 'wheel' | 'draw';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
+  const [showHelp, setShowHelp] = useState(false);
 
   const navigateTo = (page: Page) => {
     setCurrentPage(page);
@@ -33,21 +35,125 @@ function App() {
               LuckyDraw
             </span>
           </div>
-          <div className="flex items-center gap-4 sm:gap-6">
-            <a href="#" className="text-dropbox-gray-500 hover:text-dropbox-gray-900 transition-colors text-xs sm:text-sm">
-              帮助
-            </a>
+          <div className="flex items-center gap-3 sm:gap-6">
+            {/* 帮助按钮 */}
+            <button 
+              onClick={() => setShowHelp(true)}
+              className="flex items-center gap-1.5 text-dropbox-gray-500 hover:text-dropbox-blue transition-colors text-xs sm:text-sm active:scale-95"
+            >
+              <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">帮助</span>
+            </button>
+            
+            {/* GitHub 链接 */}
             <a 
-              href="https://github.com" 
+              href="https://github.com/1850741061/lucky-draw" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-dropbox-gray-500 hover:text-dropbox-gray-900 transition-colors"
+              className="flex items-center gap-1.5 text-dropbox-gray-500 hover:text-dropbox-gray-900 transition-colors active:scale-95"
+              title="GitHub 仓库"
             >
               <Github className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-xs hidden sm:inline">GitHub</span>
             </a>
           </div>
         </div>
       </nav>
+
+      {/* Help Modal */}
+      <AnimatePresence>
+        {showHelp && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowHelp(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl sm:rounded-3xl shadow-soft-xl max-w-lg w-full max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="sticky top-0 bg-white border-b border-dropbox-gray-100 p-4 sm:p-6 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 text-dropbox-blue" />
+                  <h2 className="font-display font-semibold text-lg text-dropbox-gray-900">
+                    使用帮助
+                  </h2>
+                </div>
+                <button 
+                  onClick={() => setShowHelp(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dropbox-gray-100 transition-colors"
+                >
+                  <X className="w-5 h-5 text-dropbox-gray-500" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 sm:p-6 space-y-6">
+                {/* 幸运转盘 */}
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 bg-dropbox-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <RotateCcw className="w-5 h-5 text-dropbox-blue" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-dropbox-gray-900 mb-2">🎯 幸运转盘</h3>
+                    <ul className="text-sm text-dropbox-gray-500 space-y-1.5">
+                      <li>• 添加任意数量的选项（2-12个）</li>
+                      <li>• 点击图表图标可设置权重，权重越大概率越高</li>
+                      <li>• 扇区大小会自动根据权重比例显示</li>
+                      <li>• 点击"开始转盘"旋转决定结果</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* 随机抽签 */}
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 bg-dropbox-accent-purple/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 text-dropbox-accent-purple" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-dropbox-gray-900 mb-2">🎲 随机抽签</h3>
+                    <ul className="text-sm text-dropbox-gray-500 space-y-1.5">
+                      <li>• <strong>不重复模式：</strong>每人只能被抽中一次</li>
+                      <li>• <strong>可重复模式：</strong>每次独立抽取，可能重复</li>
+                      <li>• 可选择抽取 1/2/3/5 人</li>
+                      <li>• 已抽中的人会变灰显示</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* 小贴士 */}
+                <div className="bg-dropbox-gray-50 rounded-xl p-4">
+                  <h3 className="font-semibold text-dropbox-gray-900 mb-2 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    💡 小贴士
+                  </h3>
+                  <ul className="text-sm text-dropbox-gray-500 space-y-1">
+                    <li>• 所有数据保存在本地，刷新页面不会丢失</li>
+                    <li>• 支持在手机和电脑上使用</li>
+                    <li>• 点击"重置"可恢复默认设置</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="sticky bottom-0 bg-white border-t border-dropbox-gray-100 p-4 sm:p-6">
+                <button 
+                  onClick={() => setShowHelp(false)}
+                  className="w-full py-3 bg-dropbox-blue text-white font-medium rounded-xl hover:bg-dropbox-blue-dark transition-colors active:scale-[0.98]"
+                >
+                  知道了
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Hero Section - 移动端优化 */}
       <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6">
@@ -181,7 +287,12 @@ function App() {
           </p>
           
           <div className="flex items-center gap-3 sm:gap-4">
-            <a href="#" className="text-dropbox-gray-400 hover:text-dropbox-gray-600 transition-colors">
+            <a 
+              href="https://twitter.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-dropbox-gray-400 hover:text-dropbox-gray-600 transition-colors"
+            >
               <Twitter className="w-4 h-4 sm:w-5 sm:h-5" />
             </a>
             <a 
