@@ -184,7 +184,12 @@ function App() {
             <a href="#" className="text-dropbox-gray-400 hover:text-dropbox-gray-600 transition-colors">
               <Twitter className="w-4 h-4 sm:w-5 sm:h-5" />
             </a>
-            <a href="#" className="text-dropbox-gray-400 hover:text-dropbox-gray-600 transition-colors">
+            <a 
+              href="https://github.com/1850741061/lucky-draw" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-dropbox-gray-400 hover:text-dropbox-gray-600 transition-colors"
+            >
               <Github className="w-4 h-4 sm:w-5 sm:h-5" />
             </a>
           </div>
