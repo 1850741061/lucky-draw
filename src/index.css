@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: #ffffff;
+    --color-surface: #F7F9FA;
+    --color-surface-elevated: #ffffff;
+    --color-text: #000000;
+    --color-text-secondary: #5F6B7A;
+    --color-text-muted: #9EA5AD;
+    --color-accent: #0061FF;
+    --color-accent-secondary: #7B61FF;
+    --color-border: #E6E8EB;
+  }
+
+  * {
+    @apply border-dropbox-gray-100;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply font-sans text-dropbox-gray-900 bg-white antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    @apply bg-dropbox-blue/20 text-dropbox-blue;
+  }
+}
+
+@layer components {
+  .font-display {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-dropbox-blue text-white font-medium rounded-xl 
+           transition-all duration-200 hover:bg-dropbox-blue-dark 
+           hover:shadow-glow-blue active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-white text-dropbox-gray-700 font-medium rounded-xl 
+           border border-dropbox-gray-200 transition-all duration-200 
+           hover:bg-dropbox-gray-50 hover:border-dropbox-gray-300 
+           active:scale-[0.98];
+  }
+
+  .card {
+    @apply bg-white rounded-3xl shadow-soft transition-all duration-300 
+           hover:shadow-soft-lg hover:-translate-y-1;
+  }
+
+  .card-elevated {
+    @apply bg-white rounded-3xl shadow-soft-lg;
+  }
+
+  .input {
+    @apply w-full px-4 py-3 bg-dropbox-gray-50 border border-transparent 
+           rounded-xl text-dropbox-gray-900 font-medium 
+           placeholder:text-dropbox-gray-400
+           focus:outline-none focus:ring-2 focus:ring-dropbox-blue/20 focus:border-dropbox-blue
+           transition-all duration-200;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-dropbox-blue via-dropbox-accent-purple to-dropbox-accent-pink 
+           bg-clip-text text-transparent;
+  }
+
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border-b border-dropbox-gray-100;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  @apply outline-none ring-2 ring-dropbox-blue/30 ring-offset-2 ring-offset-white;
+}
+
+button,
+input {
+  touch-action: manipulation;
+}
