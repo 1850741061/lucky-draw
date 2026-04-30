@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Play, RotateCcw, Settings2, Sparkles, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Play, RotateCcw, Settings2, Sparkles, BarChart3, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface WheelOption {
@@ -19,6 +19,25 @@ const DEFAULT_OPTIONS: WheelOption[] = [
   { id: '2', text: '选项 2', color: PRESET_COLORS[1], weight: 1 },
   { id: '3', text: '选项 3', color: PRESET_COLORS[2], weight: 1 },
   { id: '4', text: '选项 4', color: PRESET_COLORS[3], weight: 1 },
+];
+
+interface WheelPreset {
+  id: string;
+  name: string;
+  emoji: string;
+  options: Omit<WheelOption, 'id'>[];
+}
+
+const PRESETS: WheelPreset[] = [
+  {
+    id: 'game',
+    name: '游戏转盘',
+    emoji: '🎮',
+    options: [
+      { text: '无畏契约', color: '#FF4655', weight: 1 },
+      { text: '英雄联盟', color: '#C8AA6E', weight: 1 },
+    ],
+  },
 ];
 
 interface WheelPageProps {
@@ -45,8 +64,26 @@ export default function WheelPage({ onBack }: WheelPageProps) {
   const [winner, setWinner] = useState<WheelOption | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showWeightPanel, setShowWeightPanel] = useState(false);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [canvasSize, setCanvasSize] = useState(320);
+
+  const applyPreset = (presetId: string | null) => {
+    if (presetId === null) {
+      setOptions(DEFAULT_OPTIONS);
+      setActivePreset(null);
+    } else {
+      const preset = PRESETS.find(p => p.id === presetId);
+      if (!preset) return;
+      setOptions(preset.options.map((opt, i) => ({
+        ...opt,
+        id: `preset-${presetId}-${i}`,
+      })));
+      setActivePreset(presetId);
+    }
+    setRotation(0);
+    setWinner(null);
+  };
 
   // 响应式画布大小
   useEffect(() => {
@@ -350,6 +387,39 @@ export default function WheelPage({ onBack }: WheelPageProps) {
                   <span className="text-xs sm:text-sm text-dropbox-gray-400">
                     {options.length} / 12
                   </span>
+                </div>
+              </div>
+
+              {/* Preset Selector */}
+              <div className="mb-4 sm:mb-6">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                  <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-dropbox-gray-400" />
+                  <span className="text-xs sm:text-sm font-medium text-dropbox-gray-500">预设转盘</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => applyPreset(null)}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all active:scale-95 ${
+                      activePreset === null
+                        ? 'bg-dropbox-gray-900 text-white shadow-soft'
+                        : 'bg-dropbox-gray-100 text-dropbox-gray-600 hover:bg-dropbox-gray-200'
+                    }`}
+                  >
+                    自定义
+                  </button>
+                  {PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      onClick={() => applyPreset(preset.id)}
+                      className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all active:scale-95 ${
+                        activePreset === preset.id
+                          ? 'bg-dropbox-gray-900 text-white shadow-soft'
+                          : 'bg-dropbox-gray-100 text-dropbox-gray-600 hover:bg-dropbox-gray-200'
+                      }`}
+                    >
+                      {preset.emoji} {preset.name}
+                    </button>
+                  ))}
                 </div>
               </div>
 
