@@ -1,14 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
-import { ArrowRight, X, HelpCircle, Github, Sun, Moon } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowRight, X, HelpCircle, Github, Sun, Moon, Sparkles, Target, Shuffle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import WheelPage from './pages/WheelPage';
 import DrawPage from './pages/DrawPage';
 
 type Page = 'home' | 'wheel' | 'draw';
 
-// Lusion-inspired Interactive Canvas Particle Network (Self-adapts colors dynamically)
-function ParticleBackground() {
+/* ═══════════════════════════════════════════════
+   STARDUST PARTICLE BACKGROUND
+   Slow, ethereal particles with golden connections
+   ═══════════════════════════════════════════════ */
+function StardustBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef = useRef({ x: -9999, y: -9999 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -16,114 +20,84 @@ function ParticleBackground() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationFrameId: number;
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
+    let w = (canvas.width = window.innerWidth);
+    let h = (canvas.height = window.innerHeight);
 
     const handleResize = () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
     };
     window.addEventListener('resize', handleResize);
 
+    const count = Math.min(50, Math.floor((w * h) / 35000));
     const particles: Array<{
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      radius: number;
+      x: number; y: number; vx: number; vy: number; r: number; phase: number;
     }> = [];
 
-    const particleCount = Math.min(65, Math.floor((width * height) / 25000));
-    for (let i = 0; i < particleCount; i++) {
+    for (let i = 0; i < count; i++) {
       particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.28,
-        vy: (Math.random() - 0.5) * 0.28,
-        radius: Math.random() * 1.5 + 0.5,
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.18,
+        vy: (Math.random() - 0.5) * 0.18,
+        r: Math.random() * 1.2 + 0.4,
+        phase: Math.random() * Math.PI * 2,
       });
     }
 
-    const mouse = { x: -9999, y: -9999, active: false };
-
     const handleMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      mouse.active = true;
+      mouseRef.current.x = e.clientX;
+      mouseRef.current.y = e.clientY;
     };
-
-    const handleMouseLeave = () => {
-      mouse.x = -9999;
-      mouse.y = -9999;
-      mouse.active = false;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        mouse.x = e.touches[0].clientX;
-        mouse.y = e.touches[0].clientY;
-        mouse.active = true;
-      }
-    };
-
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseleave', handleMouseLeave);
-    window.addEventListener('touchmove', handleTouchMove);
-    window.addEventListener('touchend', handleMouseLeave);
 
-    const draw = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      // Dynamically read theme state from document body/documentElement
+    let animId: number;
+    const draw = (time: number) => {
+      ctx.clearRect(0, 0, w, h);
       const isDark = document.documentElement.classList.contains('dark');
-      
-      // Adapt styling configuration based on active theme
-      const dotColor = isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.12)';
-      const lineAlpha = isDark ? 0.05 : 0.045;
-      const cursorLineAlpha = isDark ? 0.14 : 0.09;
-      const rgbBase = isDark ? '255, 255, 255' : '0, 0, 0';
+      const dotColor = isDark ? 'rgba(212,184,150,' : 'rgba(10,10,15,';
+      const lineBase = isDark ? '212,184,150' : '10,10,15';
+      const cursorBase = isDark ? '212,184,150' : '201,168,108';
 
-      ctx.fillStyle = dotColor;
-      ctx.lineWidth = 0.6;
-
-      // Update & render particles
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
+        // Drift with subtle sine wave
+        p.x += p.vx + Math.sin(time * 0.0003 + p.phase) * 0.05;
+        p.y += p.vy + Math.cos(time * 0.0002 + p.phase) * 0.05;
+        if (p.x < 0) p.x = w;
+        if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h;
+        if (p.y > h) p.y = 0;
 
-        // Normal drift
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // Boundary rebound
-        if (p.x < 0 || p.x > width) p.vx *= -1;
-        if (p.y < 0 || p.y > height) p.vy *= -1;
-
-        // Magnetic attraction toward mouse
-        if (mouse.active) {
-          const dx = mouse.x - p.x;
-          const dy = mouse.y - p.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 180) {
-            p.x += (dx / dist) * 0.35;
-            p.y += (dy / dist) * 0.35;
-          }
+        // Mouse gentle repulsion
+        const mx = mouseRef.current.x;
+        const my = mouseRef.current.y;
+        const dx = p.x - mx;
+        const dy = p.y - my;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 200 && dist > 0) {
+          const force = (1 - dist / 200) * 0.3;
+          p.x += (dx / dist) * force;
+          p.y += (dy / dist) * force;
         }
 
-        // Draw node
+        // Draw dot with breathing opacity
+        const breath = 0.5 + Math.sin(time * 0.001 + p.phase) * 0.3;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `${dotColor}${(0.12 * breath).toFixed(3)})`;
         ctx.fill();
 
-        // Draw connecting spider mesh
+        // Draw connections
         for (let j = i + 1; j < particles.length; j++) {
           const p2 = particles[j];
-          const dx = p.x - p2.x;
-          const dy = p.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 100) {
-            ctx.strokeStyle = `rgba(${rgbBase}, ${lineAlpha * (1 - dist / 100)})`;
+          const ddx = p.x - p2.x;
+          const ddy = p.y - p2.y;
+          const d = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (d < 130) {
+            const alpha = (1 - d / 130) * 0.04;
+            ctx.strokeStyle = `rgba(${lineBase},${alpha.toFixed(3)})`;
+            ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
@@ -131,53 +105,88 @@ function ParticleBackground() {
           }
         }
 
-        // Draw cursor connection web
-        if (mouse.active) {
-          const dx = mouse.x - p.x;
-          const dy = mouse.y - p.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 140) {
-            ctx.strokeStyle = `rgba(${rgbBase}, ${cursorLineAlpha * (1 - dist / 140)})`;
+        // Cursor connection
+        if (mx > -1000) {
+          const cdx = mx - p.x;
+          const cdy = my - p.y;
+          const cd = Math.sqrt(cdx * cdx + cdy * cdy);
+          if (cd < 160) {
+            const alpha = (1 - cd / 160) * 0.1;
+            ctx.strokeStyle = `rgba(${cursorBase},${alpha.toFixed(3)})`;
+            ctx.lineWidth = 0.6;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
-            ctx.lineTo(mouse.x, mouse.y);
+            ctx.lineTo(mx, my);
             ctx.stroke();
           }
         }
       }
 
-      animationFrameId = requestAnimationFrame(draw);
+      animId = requestAnimationFrame(draw);
     };
 
-    draw();
-
+    animId = requestAnimationFrame(draw);
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseleave', handleMouseLeave);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleMouseLeave);
-      cancelAnimationFrame(animationFrameId);
+      cancelAnimationFrame(animId);
     };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none w-full h-full z-0 opacity-80"
+      className="fixed inset-0 pointer-events-none w-full h-full z-0"
+      style={{ opacity: 0.85 }}
     />
   );
 }
 
+/* ═══════════════════════════════════════════════
+   AMBIENT ORBS — Background depth layers
+   ═══════════════════════════════════════════════ */
+function AmbientOrbs() {
+  return (
+    <>
+      <div className="fixed top-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full pointer-events-none z-0 opacity-[0.03] dark:opacity-[0.04]"
+        style={{ background: 'radial-gradient(circle, var(--accent-gold) 0%, transparent 70%)', filter: 'blur(80px)', animation: 'floatSlow 20s ease-in-out infinite' }} />
+      <div className="fixed bottom-[-15%] right-[-5%] w-[50vw] h-[50vw] rounded-full pointer-events-none z-0 opacity-[0.02] dark:opacity-[0.03]"
+        style={{ background: 'radial-gradient(circle, var(--text-primary) 0%, transparent 70%)', filter: 'blur(100px)', animation: 'floatSlow 25s ease-in-out infinite reverse' }} />
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   PAGE TRANSITION WRAPPER
+   ═══════════════════════════════════════════════ */
+function PageTransition({ children, isVisible }: { children: React.ReactNode; isVisible: boolean }) {
+  return (
+    <AnimatePresence mode="wait">
+      {isVisible && (
+        <motion.div
+          key="page"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="min-h-screen"
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN APP
+   ═══════════════════════════════════════════════ */
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [showHelp, setShowHelp] = useState(false);
-
-  // Synchronized Theme state with local persistence
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
-    // Fallback to system preferred brightness
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
@@ -191,307 +200,358 @@ function App() {
     }
   }, [isDarkMode]);
 
-  const toggleTheme = () => setIsDarkMode(prev => !prev);
-
-  const navigateTo = (page: Page) => {
+  const navigateTo = useCallback((page: Page) => {
     setCurrentPage(page);
-  };
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
+  // Sub-pages
   if (currentPage === 'wheel') {
-    return <WheelPage onBack={() => navigateTo('home')} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />;
+    return (
+      <PageTransition isVisible={true}>
+        <WheelPage onBack={() => navigateTo('home')} isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(v => !v)} />
+      </PageTransition>
+    );
   }
 
   if (currentPage === 'draw') {
-    return <DrawPage onBack={() => navigateTo('home')} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />;
+    return (
+      <PageTransition isVisible={true}>
+        <DrawPage onBack={() => navigateTo('home')} isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(v => !v)} />
+      </PageTransition>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-dropbox-gray-50 text-dropbox-gray-900 font-sans overflow-hidden relative selection:bg-white/20 transition-colors duration-500">
-      {/* Background Interactive Particle Network */}
-      <ParticleBackground />
+    <PageTransition isVisible={true}>
+      <div className="min-h-screen relative overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
+        <StardustBackground />
+        <AmbientOrbs />
 
-      {/* Navigation - Minimalist Wireframe Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-dropbox-gray-50/70 backdrop-blur-xl border-b border-dropbox-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
-            <span className="font-display font-light text-dropbox-gray-900 text-base sm:text-lg tracking-[0.25em] uppercase">
-              LUCKY DRAW
-            </span>
-          </div>
-          <div className="flex items-center gap-3 sm:gap-4">
-            
-            {/* Theme Toggle Button */}
-            <button 
-              onClick={toggleTheme}
-              className="p-1.5 sm:p-2 rounded border border-dropbox-gray-100 bg-white/5 text-dropbox-gray-400 hover:text-dropbox-gray-900 transition-all duration-300 active:scale-95 flex items-center justify-center"
-              title={isDarkMode ? "切换为白画廊模式" : "切换为曜石黑模式"}
-            >
-              {isDarkMode ? <Sun className="w-4 h-4 text-white" /> : <Moon className="w-4 h-4 text-black" />}
-            </button>
-
-            {/* 帮助按钮 */}
-            <button 
-              onClick={() => setShowHelp(true)}
-              className="flex items-center gap-1.5 text-dropbox-gray-400 hover:text-dropbox-gray-900 transition-colors duration-300 text-xs uppercase tracking-widest active:scale-95 px-3 py-1.5 rounded bg-white/5 border border-dropbox-gray-100 hover:border-dropbox-gray-200"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">帮助</span>
-            </button>
-            
-            {/* GitHub 链接 */}
-            <a 
-              href="https://github.com/1850741061/lucky-draw" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-dropbox-gray-400 hover:text-dropbox-gray-900 transition-colors duration-300 active:scale-95 px-3 py-1.5 rounded bg-white/5 border border-dropbox-gray-100 hover:border-dropbox-gray-200"
-              title="GitHub"
-            >
-              <Github className="w-4 h-4" />
-              <span className="text-xs uppercase tracking-widest hidden sm:inline">GitHub</span>
-            </a>
-          </div>
-        </div>
-      </nav>
-
-      {/* Help Modal - Minimal luxury catalog window */}
-      <AnimatePresence>
-        {showHelp && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 dark:bg-black/85 backdrop-blur-md"
-            onClick={() => setShowHelp(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.98, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.98, opacity: 0 }}
-              className="bg-dropbox-gray-50 border border-dropbox-gray-100 rounded-xl shadow-soft-xl max-w-lg w-full max-h-[85vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="sticky top-0 bg-dropbox-gray-50 border-b border-dropbox-gray-100 p-4 sm:p-6 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h2 className="font-display font-light text-md uppercase tracking-[0.18em] text-dropbox-gray-900">
-                    使用帮助 // HELP
-                  </h2>
-                </div>
-                <button 
-                  onClick={() => setShowHelp(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded border border-dropbox-gray-100 hover:border-dropbox-gray-200 hover:bg-white/5 transition-all text-dropbox-gray-400 hover:text-dropbox-gray-900"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+        {/* ═══════ Navigation ═══════ */}
+        <motion.nav
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed top-0 left-0 right-0 z-50 surface border-b"
+          style={{ borderColor: 'var(--border-subtle)' }}
+        >
+          <div className="container-wide section-padding h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-ink)' }}>
+                <Sparkles className="w-4 h-4" style={{ color: 'var(--bg-primary)' }} />
               </div>
+              <span className="font-display text-sm tracking-[0.2em] uppercase" style={{ color: 'var(--text-primary)' }}>
+                LuckyDraw
+              </span>
+            </div>
 
-              {/* Content */}
-              <div className="p-4 sm:p-6 space-y-6">
-                {/* 幸运转盘 */}
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-white/5 border border-dropbox-gray-100 rounded flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-display text-dropbox-gray-900 font-light">01</span>
-                  </div>
-                  <div>
-                    <h3 className="font-display font-medium text-xs tracking-wider uppercase text-dropbox-gray-900 mb-2">🎯 LUCKY WHEEL // 幸运转盘</h3>
-                    <ul className="text-xs text-dropbox-gray-400 space-y-1.5 leading-relaxed">
-                      <li>• 支持添加任意数量自定义选项（2-12个）</li>
-                      <li>• 点击控制面板图表可展开权重调节，数值大中奖几率高</li>
-                      <li>• 原版精简预设（自定义及游戏转盘）一键载入</li>
-                      <li>• 精密物理缓动框架配合真实木齿拨片声音表现</li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* 随机抽签 */}
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-white/5 border border-dropbox-gray-100 rounded flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-display text-dropbox-gray-900 font-light">02</span>
-                  </div>
-                  <div>
-                    <h3 className="font-display font-medium text-xs tracking-wider uppercase text-dropbox-gray-900 mb-2">🎲 RANDOM LOT // 随机抽签</h3>
-                    <ul className="text-xs text-dropbox-gray-400 space-y-1.5 leading-relaxed">
-                      <li>• <strong>不重复：</strong>剔除已抽取人员，避免多重中奖</li>
-                      <li>• <strong>可重复：</strong>保留全局概率，支持二次抽中</li>
-                      <li>• 快捷发牌数：1 / 2 / 3 / 5 人选项</li>
-                      <li>• 曜石黑银卡片三维空间翻转（3D Rotate Y）仪式展现</li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* 小贴士 */}
-                <div className="bg-white/5 border border-dropbox-gray-100 rounded p-4">
-                  <h3 className="font-display font-medium text-xs tracking-wider uppercase text-dropbox-gray-900 mb-2 flex items-center gap-2">
-                    💡 TIPS // 小贴士
-                  </h3>
-                  <ul className="text-xs text-dropbox-gray-400 space-y-1 leading-relaxed">
-                    <li>• 所有数据完全依托 localStorage，永不上传，刷新不丢</li>
-                    <li>• 适配移动设备的高频动能触觉，支持高响应的音响阻尼</li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="sticky bottom-0 bg-dropbox-gray-50 border-t border-dropbox-gray-100 p-4 sm:p-6">
-                <button 
-                  onClick={() => setShowHelp(false)}
-                  className="w-full py-3 bg-dropbox-blue text-dropbox-black font-semibold rounded uppercase tracking-wider text-xs hover:opacity-90 transition-all duration-300"
-                >
-                  确认知道了 // CLOSE
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Hero Section */}
-      <section className="pt-24 sm:pt-36 pb-12 sm:pb-24 px-4 sm:px-6 relative z-10">
-        <div className="max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-dropbox-gray-100 rounded mb-8 animate-fade-in">
-            <span className="text-[10px] uppercase tracking-[0.2em] font-medium text-dropbox-gray-400">LUSION CREATIVE STUDIO INTERACTIVE DECISION</span>
-          </div>
-          
-          <h1 className="font-display font-extralight text-3xl sm:text-5xl lg:text-display-xl text-dropbox-gray-900 mb-6 sm:mb-8 animate-fade-in-up leading-tight tracking-[0.18em] uppercase">
-            让每一次选择
-            <br />
-            <span className="font-normal text-transparent bg-clip-text bg-gradient-to-r from-dropbox-gray-900 via-dropbox-gray-400 to-dropbox-gray-900/70 dark:from-white dark:via-neutral-300 dark:to-white/70">
-              都充满仪式感
-            </span>
-          </h1>
-          
-          <p className="text-xs sm:text-sm uppercase tracking-[0.15em] text-dropbox-gray-400 max-w-2xl mx-auto mb-10 sm:mb-16 px-2 sm:px-0 animate-fade-in-up leading-relaxed font-light" style={{ animationDelay: '0.1s' }}>
-            自定义轮盘与卡片抽签工具。舍弃杂乱，回归最纯粹的黑白色彩与动效表达。
-          </p>
-
-          {/* Feature Grid - lusion.co wireframe style */}
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
-            {/* Wheel Card */}
-            <button
-              onClick={() => navigateTo('wheel')}
-              className="group relative bg-[#060606]/5 dark:bg-[#060606]/65 border border-dropbox-gray-100 hover:border-dropbox-gray-200 rounded-xl p-6 sm:p-10 transition-all duration-500 hover:bg-[#0c0c0c]/5 dark:hover:bg-[#0c0c0c]/85 active:scale-[0.99] animate-fade-in-up"
-              style={{ animationDelay: '0.2s' }}
-            >
-              <div className="absolute top-6 right-6 w-9 h-9 border border-dropbox-gray-100 rounded-full flex items-center justify-center group-hover:bg-dropbox-blue group-hover:text-dropbox-black group-hover:border-dropbox-blue transition-all duration-300">
-                <ArrowRight className="w-4 h-4 text-dropbox-gray-900 group-hover:text-dropbox-black" />
-              </div>
-              
-              <div className="w-10 h-10 border border-dropbox-gray-100 rounded flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300">
-                <span className="text-xs font-display text-dropbox-gray-900">01</span>
-              </div>
-              
-              <h3 className="font-display font-light text-lg sm:text-xl text-dropbox-gray-900 mb-2 uppercase tracking-[0.18em]">
-                LUCKY WHEEL // 幸运转盘
-              </h3>
-              <p className="text-xs text-dropbox-gray-400 leading-relaxed font-light">
-                水晶极简分段扇区，配置专属数值比例。每一次启动都将配合清脆拨片声及 major 9th 琶音中奖和弦。
-              </p>
-            </button>
-
-            {/* Draw Card */}
-            <button
-              onClick={() => navigateTo('draw')}
-              className="group relative bg-[#060606]/5 dark:bg-[#060606]/65 border border-dropbox-gray-100 hover:border-dropbox-gray-200 rounded-xl p-6 sm:p-10 transition-all duration-500 hover:bg-[#0c0c0c]/5 dark:hover:bg-[#0c0c0c]/85 active:scale-[0.99] animate-fade-in-up"
-              style={{ animationDelay: '0.3s' }}
-            >
-              <div className="absolute top-6 right-6 w-9 h-9 border border-dropbox-gray-100 rounded-full flex items-center justify-center group-hover:bg-dropbox-blue group-hover:text-dropbox-black group-hover:border-dropbox-blue transition-all duration-300">
-                <ArrowRight className="w-4 h-4 text-dropbox-gray-900 group-hover:text-dropbox-black" />
-              </div>
-              
-              <div className="w-10 h-10 border border-dropbox-gray-100 rounded flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300">
-                <span className="text-xs font-display text-dropbox-gray-900">02</span>
-              </div>
-              
-              <h3 className="font-display font-light text-lg sm:text-xl text-dropbox-gray-900 mb-2 uppercase tracking-[0.18em]">
-                RANDOM LOT // 随机抽签
-              </h3>
-              <p className="text-xs text-dropbox-gray-400 leading-relaxed font-light">
-                极具写照感的卡片反转揭晓。支持同时切出多张卡片，通过 Y 轴 180 度翻动打造高悬念的决策过程。
-              </p>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-12 sm:py-24 px-4 sm:px-6 bg-[#040404]/5 dark:bg-[#040404]/50 border-t border-b border-dropbox-gray-100 relative z-10">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="font-display font-light text-xl sm:text-2xl text-dropbox-gray-900 text-center mb-12 sm:mb-20 uppercase tracking-[0.25em]">
-            // THE ADVANTAGE // 我们的核心优势
-          </h2>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
-            {[
-              {
-                icon: '01',
-                title: '纯粹交互',
-                desc: '鼠标划过激起微粒浮动，每一次点击与滑越皆有原生音效的高速合成回馈'
-              },
-              {
-                icon: '02',
-                title: '艺术美感',
-                desc: '抛弃杂乱霓虹，使用钛金黑、白银一像素线框与高纯文字，成就画卷级交互设计'
-              },
-              {
-                icon: '03',
-                title: '完全本地',
-                desc: '无联网权限，数据永久缓存于用户的本机内存，安全私密，配置瞬时加载'
-              }
-            ].map((feature, index) => (
-              <div 
-                key={index} 
-                className="text-left p-6 sm:p-8 bg-[#060606]/5 dark:bg-[#060606]/35 border border-dropbox-gray-100 hover:border-dropbox-gray-200 rounded transition-all duration-300 animate-fade-in-up"
-                style={{ animationDelay: `${0.1 * index}s` }}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsDarkMode(v => !v)}
+                className="btn-ghost w-9 h-9 p-0 flex items-center justify-center"
+                title={isDarkMode ? '切换日间模式' : '切换夜间模式'}
               >
-                <div className="w-9 h-9 border border-dropbox-gray-100 rounded flex items-center justify-center text-xs text-dropbox-gray-900 font-mono mb-4">
-                  {feature.icon}
-                </div>
-                <h3 className="font-display font-light text-sm text-dropbox-gray-900 mb-2 uppercase tracking-widest">
-                  {feature.title}
-                </h3>
-                <p className="text-xs text-dropbox-gray-400 leading-relaxed font-light">
-                  {feature.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
 
-      {/* Footer */}
-      <footer className="py-8 sm:py-16 px-4 sm:px-6 border-t border-dropbox-gray-100 relative z-10 bg-dropbox-gray-50/60 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-display font-light text-dropbox-gray-900 text-sm tracking-[0.2em] uppercase">
-              LUCKYDRAW STUDIO
-            </span>
+              <button onClick={() => setShowHelp(true)} className="btn-ghost hidden sm:flex items-center gap-2">
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>帮助</span>
+              </button>
+
+              <a
+                href="https://github.com/1850741061/lucky-draw"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost hidden sm:flex items-center gap-2"
+              >
+                <Github className="w-3.5 h-3.5" />
+                <span>GitHub</span>
+              </a>
+            </div>
           </div>
-          
-          <p className="text-[10px] uppercase tracking-widest text-dropbox-gray-300">
-            AESTHETIC PORTFOLIO BY LUCKYDRAW TEAM
-          </p>
-          
-          <div className="flex items-center gap-4">
-            <a 
-              href="https://twitter.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-dropbox-gray-400 hover:text-dropbox-gray-900 transition-colors text-xs uppercase tracking-widest"
+        </motion.nav>
+
+        {/* ═══════ Help Modal ═══════ */}
+        <AnimatePresence>
+          {showHelp && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+              style={{ background: 'rgba(6,6,10,0.75)', backdropFilter: 'blur(12px)' }}
+              onClick={() => setShowHelp(false)}
             >
-              Twitter
-            </a>
-            <a 
-              href="https://github.com/1850741061/lucky-draw" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-dropbox-gray-400 hover:text-dropbox-gray-900 transition-colors text-xs uppercase tracking-widest"
+              <motion.div
+                initial={{ scale: 0.96, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.96, opacity: 0, y: 20 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="card max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <h2 className="font-display text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--text-primary)' }}>
+                    使用指南
+                  </h2>
+                  <button onClick={() => setShowHelp(false)} className="btn-ghost w-8 h-8 p-0 flex items-center justify-center">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 space-y-6 overflow-y-auto">
+                  {[
+                    {
+                      num: '01',
+                      title: '幸运转盘',
+                      icon: Target,
+                      items: ['支持 2-12 个自定义选项', '权重系统控制中奖概率', '物理缓动动画 + 合成音效', '一键切换游戏预设'],
+                    },
+                    {
+                      num: '02',
+                      title: '随机抽签',
+                      icon: Shuffle,
+                      items: ['不重复 / 可重复 两种模式', '支持一次抽取 1-5 人', '3D 卡片翻转揭晓效果', '完整抽签历史记录'],
+                    },
+                  ].map((section) => (
+                    <div key={section.num} className="flex gap-4">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 surface" style={{ borderColor: 'var(--border-subtle)' }}>
+                        <section.icon className="w-4 h-4" style={{ color: 'var(--accent-gold)' }} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-display text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-primary)' }}>
+                          {section.num} / {section.title}
+                        </h3>
+                        <ul className="space-y-1.5">
+                          {section.items.map((item, i) => (
+                            <li key={i} className="text-xs leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="p-4 rounded-xl surface" style={{ borderColor: 'var(--border-subtle)' }}>
+                    <h3 className="font-display text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-primary)' }}>
+                      数据隐私
+                    </h3>
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+                      所有数据仅存储于浏览器本地，不上传任何服务器。刷新页面后配置依然保留。
+                    </p>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <button onClick={() => setShowHelp(false)} className="btn-primary w-full">
+                    知道了
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ═══════ Hero Section ═══════ */}
+        <section className="relative z-10 pt-32 sm:pt-44 pb-16 sm:pb-28 section-padding">
+          <div className="container-tight text-center">
+            {/* Eyebrow */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full mb-8 surface"
+              style={{ borderColor: 'var(--border-subtle)' }}
             >
-              GitHub
-            </a>
+              <div className="w-1.5 h-1.5 rounded-full animate-pulse-subtle" style={{ background: 'var(--accent-gold)' }} />
+              <span className="text-[10px] uppercase tracking-[0.2em] font-medium" style={{ color: 'var(--text-tertiary)' }}>
+                交互式决策工具
+              </span>
+            </motion.div>
+
+            {/* Main Title */}
+            <motion.h1
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="font-display text-4xl sm:text-6xl lg:text-display-2xl font-bold mb-6 leading-[1.1] tracking-tight"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              <span className="block">让每一次选择</span>
+              <span className="block text-gradient-gold mt-1">都充满仪式感</span>
+            </motion.h1>
+
+            {/* Subtitle */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="text-sm sm:text-base max-w-xl mx-auto mb-16 leading-relaxed"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              自定义幸运转盘与随机抽签工具。<br className="hidden sm:block" />
+              以极致简约的设计语言，还原决策应有的庄重与趣味。
+            </motion.p>
+
+            {/* Feature Cards */}
+            <div className="grid md:grid-cols-2 gap-5 max-w-3xl mx-auto text-left">
+              {[
+                {
+                  icon: Target,
+                  num: '01',
+                  title: '幸运转盘',
+                  subtitle: 'Lucky Wheel',
+                  desc: '物理级缓动动画，合成音效反馈，支持权重调节与游戏预设一键载入。',
+                  page: 'wheel' as Page,
+                  delay: 0.3,
+                },
+                {
+                  icon: Shuffle,
+                  num: '02',
+                  title: '随机抽签',
+                  subtitle: 'Random Draw',
+                  desc: '3D 卡片翻转揭晓，不重复与可重复模式，营造悬念十足的抽取仪式。',
+                  page: 'draw' as Page,
+                  delay: 0.4,
+                },
+              ].map((card) => (
+                <motion.button
+                  key={card.num}
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: card.delay, ease: [0.22, 1, 0.36, 1] }}
+                  whileHover={{ y: -4, transition: { duration: 0.3 } }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigateTo(card.page)}
+                  onMouseMove={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    e.currentTarget.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                    e.currentTarget.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+                  }}
+                  className="group relative card surface-hover p-7 sm:p-10 text-left overflow-hidden"
+                >
+                  {/* Hover glow */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{ background: 'radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--glow-color), transparent 40%)' }} />
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-8">
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center surface"
+                        style={{ borderColor: 'var(--border-subtle)' }}>
+                        <card.icon className="w-5 h-5" style={{ color: 'var(--accent-gold)' }} />
+                      </div>
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center surface group-hover:scale-110 transition-transform duration-300"
+                        style={{ borderColor: 'var(--border-subtle)' }}>
+                        <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" style={{ color: 'var(--text-primary)' }} />
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <span className="font-mono text-[10px] uppercase tracking-widest block mb-1" style={{ color: 'var(--text-muted)' }}>
+                        {card.num}
+                      </span>
+                      <h3 className="font-display text-xl sm:text-2xl font-semibold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                        {card.title}
+                      </h3>
+                      <span className="text-[10px] uppercase tracking-[0.15em] font-mono" style={{ color: 'var(--text-muted)' }}>
+                        {card.subtitle}
+                      </span>
+                    </div>
+
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+                      {card.desc}
+                    </p>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
           </div>
-        </div>
-      </footer>
-    </div>
+        </section>
+
+        {/* ═══════ Divider ═══════ */}
+        <div className="relative z-10 divider-elegant max-w-3xl mx-auto" />
+
+        {/* ═══════ Features Section ═══════ */}
+        <section className="relative z-10 py-20 sm:py-32 section-padding">
+          <div className="container-tight">
+            <motion.h2
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="font-display text-center text-lg sm:text-xl font-medium mb-16 sm:mb-20 tracking-tight"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              <span className="text-gradient-gold">核心优势</span>
+            </motion.h2>
+
+            <div className="grid sm:grid-cols-3 gap-6">
+              {[
+                { num: '01', title: '纯粹交互', desc: '每一个按钮、每一次滑动都有精心调校的触觉与视觉反馈，拒绝粗糙。' },
+                { num: '02', title: '艺术美感', desc: '曜石黑与暖金的配色体系，玻璃拟态材质，营造沉浸式的使用体验。' },
+                { num: '03', title: '完全本地', desc: '数据仅存于设备本地，零网络请求，即时响应，隐私绝对安全。' },
+              ].map((feat, i) => (
+                <motion.div
+                  key={feat.num}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-80px' }}
+                  transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                  className="card p-6 sm:p-8 surface-hover"
+                >
+                  <span className="font-mono text-xs" style={{ color: 'var(--accent-gold)' }}>
+                    {feat.num}
+                  </span>
+                  <h3 className="font-display text-sm font-semibold mt-3 mb-2 tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                    {feat.title}
+                  </h3>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+                    {feat.desc}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════ Footer ═══════ */}
+        <footer className="relative z-10 border-t py-10 sm:py-14 section-padding" style={{ borderColor: 'var(--border-subtle)' }}>
+          <div className="container-tight flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'var(--accent-ink)' }}>
+                <Sparkles className="w-3 h-3" style={{ color: 'var(--bg-primary)' }} />
+              </div>
+              <span className="font-display text-xs tracking-[0.15em] uppercase" style={{ color: 'var(--text-secondary)' }}>
+                LuckyDraw
+              </span>
+            </div>
+
+            <p className="text-[10px] uppercase tracking-[0.15em]" style={{ color: 'var(--text-muted)' }}>
+              精心打造 · 免费开源
+            </p>
+
+            <div className="flex items-center gap-5">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
+                className="text-[10px] uppercase tracking-widest transition-colors hover:opacity-70"
+                style={{ color: 'var(--text-muted)' }}>
+                Twitter
+              </a>
+              <a href="https://github.com/1850741061/lucky-draw" target="_blank" rel="noopener noreferrer"
+                className="text-[10px] uppercase tracking-widest transition-colors hover:opacity-70"
+                style={{ color: 'var(--text-muted)' }}>
+                GitHub
+              </a>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </PageTransition>
   );
 }
 
