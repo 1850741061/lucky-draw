@@ -8,31 +8,31 @@ export default {
     extend: {
       colors: {
         dropbox: {
-          blue: '#FFFFFF', // Pure Minimalist White
-          'blue-dark': '#E2E8F0', // Fine Silver
-          'blue-light': '#CBD5E1', // Light Grey
-          black: '#000000',
-          white: 'rgba(6, 6, 6, 0.8)', // Translucent Obsidian Black
+          blue: 'var(--color-accent)', // White in dark, Obsidian black in light
+          'blue-dark': 'var(--color-accent-dark)', // Grey-silver/Charcoal
+          'blue-light': 'var(--color-text-secondary)',
+          black: 'var(--color-bg)',
+          white: 'var(--color-surface)', // Frosted translucent background
           gray: {
-            50: '#050505', // Deep Obsidian Black
-            100: 'rgba(255, 255, 255, 0.06)', // Ultra fine white wireframe
-            200: 'rgba(255, 255, 255, 0.12)', // Subtle active border
-            300: '#64748B', // Slate grey
-            400: '#94A3B8', // Medium slate text
-            500: '#CBD5E1', // Light text slate
-            600: '#E2E8F0',
-            700: '#F1F5F9',
-            800: '#F8FAFC',
-            900: '#FFFFFF', // High-contrast primary text
+            50: 'var(--color-bg)', // Dynamic page background
+            100: 'var(--color-border)', // Fine wireframe boundary
+            200: 'var(--color-border-hover)', // Subtle hover boundary
+            300: 'var(--color-text-muted)', // Muted slate gray
+            400: 'var(--color-text-secondary)', // Body gray text
+            500: 'var(--color-text-secondary-light)', // Secondary light grey text
+            600: 'var(--color-text-muted)',
+            700: 'var(--color-text-secondary)',
+            800: 'var(--color-text-secondary-light)',
+            900: 'var(--color-text)', // High-contrast pure white/pure black text
           },
           accent: {
-            purple: '#E2E8F0', // Pure silver
-            pink: '#FFFFFF',
-            coral: '#FF4B4B', // Scarlet red for delete actions
-            orange: '#CBD5E1',
-            yellow: '#FFFFFF',
-            green: '#FFFFFF',
-            teal: '#A1A1AA',
+            purple: 'var(--color-accent-purple)', // Slate-metal / Silver
+            pink: 'var(--color-accent-pink)',
+            coral: '#FF4B4B', // Retain scarlet red for delete actions
+            orange: 'var(--color-text-secondary)',
+            yellow: 'var(--color-text)',
+            green: 'var(--color-text)',
+            teal: 'var(--color-text-muted)',
           }
         },
       },
