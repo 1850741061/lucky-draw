@@ -1,10 +1,164 @@
-import { useState } from 'react';
-import { Sparkles, Dices, ArrowRight, Github, Twitter, Heart, X, HelpCircle, RotateCcw, Users, BarChart3 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowRight, X, HelpCircle, Github } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import WheelPage from './pages/WheelPage';
 import DrawPage from './pages/DrawPage';
 
 type Page = 'home' | 'wheel' | 'draw';
+
+// Lusion-inspired Interactive Real-Time Canvas Particle Network
+function ParticleBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrameId: number;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const handleResize = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
+    const particles: Array<{
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      radius: number;
+    }> = [];
+
+    // Scale particle count based on display size
+    const particleCount = Math.min(60, Math.floor((width * height) / 25000));
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        radius: Math.random() * 1.5 + 0.5,
+      });
+    }
+
+    const mouse = { x: -9999, y: -9999, active: false };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.active = true;
+    };
+
+    const handleMouseLeave = () => {
+      mouse.x = -9999;
+      mouse.y = -9999;
+      mouse.active = false;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        mouse.x = e.touches[0].clientX;
+        mouse.y = e.touches[0].clientY;
+        mouse.active = true;
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchend', handleMouseLeave);
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 0.6;
+
+      // Update & render particles
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        // Kinetic movement
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Boundary reflection
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        // Magnet attraction effect toward user cursor (lusion style)
+        if (mouse.active) {
+          const dx = mouse.x - p.x;
+          const dy = mouse.y - p.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 180) {
+            p.x += (dx / dist) * 0.35;
+            p.y += (dy / dist) * 0.35;
+          }
+        }
+
+        // Draw particle dot
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Draw structural mesh webs
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dx = p.x - p2.x;
+          const dy = p.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < 100) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 * (1 - dist / 100)})`;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+
+        // Draw cursor light trailing webs
+        if (mouse.active) {
+          const dx = mouse.x - p.x;
+          const dy = mouse.y - p.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 140) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${0.14 * (1 - dist / 140)})`;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleMouseLeave);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 pointer-events-none w-full h-full z-0 opacity-80"
+    />
+  );
+}
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -23,20 +177,15 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#030308] text-white font-sans overflow-hidden relative selection:bg-cyan-500/30 selection:text-cyan-400">
-      {/* Drifting ambient background glow blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-mesh-blob bg-[#00f0ff] animate-float-slow opacity-[0.06] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-mesh-blob bg-[#bd00ff] animate-float-slower opacity-[0.07] pointer-events-none" />
-      <div className="absolute top-[30%] right-[10%] w-[40vw] h-[40vw] bg-mesh-blob bg-[#ff007a] animate-float opacity-[0.04] pointer-events-none" />
+    <div className="min-h-screen bg-[#000000] text-white font-sans overflow-hidden relative selection:bg-white/20 selection:text-white">
+      {/* Background Interactive Canvas Particle Network */}
+      <ParticleBackground />
 
-      {/* Navigation - 移动端优化 */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#070814]/75 backdrop-blur-xl border-b border-white/5">
+      {/* Navigation - Minimalist Wireframe Nav */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#000000]/70 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-tr from-dropbox-blue to-dropbox-accent-purple rounded-lg flex items-center justify-center shadow-glow-blue">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <span className="font-display font-semibold bg-gradient-to-r from-white via-[#b4f4ff] to-white/70 bg-clip-text text-transparent text-base sm:text-lg tracking-wider">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            <span className="font-display font-light text-white text-base sm:text-lg tracking-[0.25em] uppercase">
               LUCKY DRAW
             </span>
           </div>
@@ -44,10 +193,10 @@ function App() {
             {/* 帮助按钮 */}
             <button 
               onClick={() => setShowHelp(true)}
-              className="flex items-center gap-1.5 text-dropbox-gray-400 hover:text-dropbox-blue transition-all duration-300 text-xs sm:text-sm active:scale-95 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:border-dropbox-blue/20"
+              className="flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors duration-300 text-xs uppercase tracking-widest active:scale-95 px-3 py-1.5 rounded bg-white/5 border border-white/5 hover:border-white/15"
             >
-              <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">帮助</span>
+              <HelpCircle className="w-3.5 h-3.5 text-neutral-400" />
+              <span>帮助</span>
             </button>
             
             {/* GitHub 链接 */}
@@ -55,46 +204,45 @@ function App() {
               href="https://github.com/1850741061/lucky-draw" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-dropbox-gray-400 hover:text-white transition-colors active:scale-95 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:border-white/20"
-              title="GitHub 仓库"
+              className="flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors duration-300 active:scale-95 px-3 py-1.5 rounded bg-white/5 border border-white/5 hover:border-white/15"
+              title="GitHub"
             >
-              <Github className="w-4 h-4 sm:w-5 sm:h-5 text-[#bd00ff]" />
-              <span className="text-xs hidden sm:inline">GitHub</span>
+              <Github className="w-4 h-4 text-white" />
+              <span className="text-xs uppercase tracking-widest hidden sm:inline">GitHub</span>
             </a>
           </div>
         </div>
       </nav>
 
-      {/* Help Modal */}
+      {/* Help Modal - Minimal luxury catalog window */}
       <AnimatePresence>
         {showHelp && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
             onClick={() => setShowHelp(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.98, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#0b0c1b]/95 backdrop-blur-2xl border border-white/10 rounded-2xl sm:rounded-3xl shadow-soft-xl max-w-lg w-full max-h-[80vh] overflow-y-auto"
+              exit={{ scale: 0.98, opacity: 0 }}
+              className="bg-[#050505] border border-white/10 rounded-xl shadow-soft-xl max-w-lg w-full max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="sticky top-0 bg-[#070814]/80 backdrop-blur-md border-b border-white/5 p-4 sm:p-6 flex items-center justify-between">
+              <div className="sticky top-0 bg-[#050505] border-b border-white/5 p-4 sm:p-6 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <HelpCircle className="w-5 h-5 text-dropbox-blue" />
-                  <h2 className="font-display font-semibold text-lg text-white">
-                    使用帮助
+                  <h2 className="font-display font-light text-md uppercase tracking-[0.18em] text-white">
+                    使用帮助 // HELP
                   </h2>
                 </div>
                 <button 
                   onClick={() => setShowHelp(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded border border-white/5 hover:border-white/20 hover:bg-white/5 transition-all"
                 >
-                  <X className="w-5 h-5 text-dropbox-gray-400" />
+                  <X className="w-4 h-4 text-neutral-400" />
                 </button>
               </div>
 
@@ -102,57 +250,55 @@ function App() {
               <div className="p-4 sm:p-6 space-y-6">
                 {/* 幸运转盘 */}
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-dropbox-blue/15 rounded-xl flex items-center justify-center flex-shrink-0 border border-dropbox-blue/20">
-                    <RotateCcw className="w-5 h-5 text-dropbox-blue" />
+                  <div className="w-10 h-10 bg-white/5 border border-white/10 rounded flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-display text-white font-light">01</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white mb-2">🎯 幸运转盘</h3>
-                    <ul className="text-sm text-dropbox-gray-400 space-y-1.5">
-                      <li>• 添加任意数量的选项（2-12个）</li>
-                      <li>• 点击图表图标可设置权重，权重越大中奖概率越高</li>
-                      <li>• 轮盘扇区会自动根据权重比例自适应显示</li>
-                      <li>• 点击"开始转盘"播放沉浸式声响旋转动画</li>
+                    <h3 className="font-display font-medium text-xs tracking-wider uppercase text-white mb-2">🎯 LUCKY WHEEL // 幸运转盘</h3>
+                    <ul className="text-xs text-neutral-400 space-y-1.5 leading-relaxed">
+                      <li>• 支持添加任意数量自定义选项（2-12个）</li>
+                      <li>• 点击控制面板图表可展开权重调节，数值大中奖几率高</li>
+                      <li>• 原版精简预设（自定义及游戏转盘）一键载入</li>
+                      <li>• 精密物理缓动框架配合真实木齿拨片声音表现</li>
                     </ul>
                   </div>
                 </div>
 
                 {/* 随机抽签 */}
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-dropbox-accent-purple/15 rounded-xl flex items-center justify-center flex-shrink-0 border border-dropbox-accent-purple/20">
-                    <Users className="w-5 h-5 text-dropbox-accent-purple" />
+                  <div className="w-10 h-10 bg-white/5 border border-white/10 rounded flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-display text-white font-light">02</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white mb-2">🎲 随机抽签</h3>
-                    <ul className="text-sm text-dropbox-gray-400 space-y-1.5">
-                      <li>• <strong>不重复模式：</strong>每人只能被抽中一次，已被抽中的变灰</li>
-                      <li>• <strong>可重复模式：</strong>每次独立抽取，可能重复抽中</li>
-                      <li>• 快捷选择同时抽取 1 / 2 / 3 / 5 人</li>
-                      <li>• 极具仪式感的 3D 卡片发牌与翻牌揭晓效果</li>
+                    <h3 className="font-display font-medium text-xs tracking-wider uppercase text-white mb-2">🎲 RANDOM LOT // 随机抽签</h3>
+                    <ul className="text-xs text-neutral-400 space-y-1.5 leading-relaxed">
+                      <li>• <strong>不重复：</strong>剔除已抽取人员，避免多重中奖</li>
+                      <li>• <strong>可重复：</strong>保留全局概率，支持二次抽中</li>
+                      <li>• 快捷发牌数：1 / 2 / 3 / 5 人选项</li>
+                      <li>• 曜石黑银卡片三维空间翻转（3D Rotate Y）仪式展现</li>
                     </ul>
                   </div>
                 </div>
 
                 {/* 小贴士 */}
-                <div className="bg-white/5 border border-white/5 rounded-xl p-4">
-                  <h3 className="font-semibold text-white mb-2 flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-dropbox-blue" />
-                    💡 小贴士
+                <div className="bg-white/5 border border-white/5 rounded p-4">
+                  <h3 className="font-display font-medium text-xs tracking-wider uppercase text-white mb-2 flex items-center gap-2">
+                    💡 TIPS // 小贴士
                   </h3>
-                  <ul className="text-sm text-dropbox-gray-400 space-y-1">
-                    <li>• 所有数据保存在本地，刷新页面不会丢失</li>
-                    <li>• 适配移动端高频振动与触碰优化，体验顺滑</li>
-                    <li>• 点击"重置"可一键恢复默认候选人</li>
+                  <ul className="text-xs text-neutral-400 space-y-1 leading-relaxed">
+                    <li>• 所有数据完全依托 localStorage，永不上传，刷新不丢</li>
+                    <li>• 适配移动设备的高频动能触觉，支持高响应的音响阻尼</li>
                   </ul>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="sticky bottom-0 bg-[#070814]/80 backdrop-blur-md border-t border-white/5 p-4 sm:p-6">
+              <div className="sticky bottom-0 bg-[#050505] border-t border-white/5 p-4 sm:p-6">
                 <button 
                   onClick={() => setShowHelp(false)}
-                  className="w-full py-3 bg-gradient-to-r from-dropbox-blue to-dropbox-blue-dark text-white font-medium rounded-xl hover:shadow-glow-blue transition-all duration-300 active:scale-[0.98]"
+                  className="w-full py-3 bg-white text-black font-semibold rounded uppercase tracking-wider text-xs hover:bg-neutral-200 transition-all duration-300"
                 >
-                  知道了
+                  确认知道了 // CLOSE
                 </button>
               </div>
             </motion.div>
@@ -160,118 +306,111 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Hero Section - 移动端优化 */}
-      <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6 relative z-10">
+      {/* Hero Section */}
+      <section className="pt-24 sm:pt-36 pb-12 sm:pb-24 px-4 sm:px-6 relative z-10">
         <div className="max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-dropbox-blue/10 border border-dropbox-blue/20 rounded-full mb-6 sm:mb-8 animate-fade-in shadow-glow-blue">
-            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-dropbox-blue" />
-            <span className="text-xs sm:text-sm font-medium text-dropbox-blue-light">简单易用的决策工具</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/10 rounded mb-8 animate-fade-in">
+            <span className="text-[10px] uppercase tracking-[0.2em] font-medium text-neutral-300">LUSION CREATIVE STUDIO INTERACTIVE DECISION</span>
           </div>
           
-          <h1 className="font-display font-bold text-3xl sm:text-5xl lg:text-display-xl text-white mb-4 sm:mb-6 animate-fade-in-up leading-tight tracking-tight">
+          <h1 className="font-display font-extralight text-3xl sm:text-5xl lg:text-display-xl text-white mb-6 sm:mb-8 animate-fade-in-up leading-tight tracking-[0.18em] uppercase">
             让每一次选择
             <br />
-            <span className="bg-gradient-to-r from-dropbox-blue via-dropbox-accent-purple to-dropbox-accent-pink bg-clip-text text-transparent filter drop-shadow-[0_0_30px_rgba(0,240,255,0.2)]">
-              都充满惊喜
+            <span className="font-normal text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-300 to-white/70">
+              都充满仪式感
             </span>
           </h1>
           
-          <p className="text-base sm:text-xl text-dropbox-gray-400 max-w-2xl mx-auto mb-8 sm:mb-12 px-2 sm:px-0 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-            自定义转盘和抽签工具，帮助你快速做出决定。无论是聚会游戏、课堂提问还是日常决策，都能轻松应对。
+          <p className="text-xs sm:text-sm uppercase tracking-[0.15em] text-neutral-400 max-w-2xl mx-auto mb-10 sm:mb-16 px-2 sm:px-0 animate-fade-in-up leading-relaxed" style={{ animationDelay: '0.1s' }}>
+            自定义轮盘与卡片抽签工具。舍弃杂乱，回归最纯粹的黑白色彩与动效表达。
           </p>
 
-          {/* Feature Cards - 移动端优化 */}
-          <div className="grid md:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto">
+          {/* Feature Grid - lusion.co wireframe style */}
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
             {/* Wheel Card */}
             <button
               onClick={() => navigateTo('wheel')}
-              className="group relative bg-[#0d1021]/60 backdrop-blur-md border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-left transition-all duration-500 hover:border-dropbox-blue/40 hover:bg-[#121630]/70 hover:shadow-glow-blue-lg hover:-translate-y-1.5 active:scale-[0.98] animate-fade-in-up"
+              className="group relative bg-[#060606]/65 border border-white/10 rounded-xl p-6 sm:p-10 transition-all duration-500 hover:border-white/30 hover:bg-[#0c0c0c]/85 active:scale-[0.99] animate-fade-in-up"
               style={{ animationDelay: '0.2s' }}
             >
-              <div className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 sm:w-12 sm:h-12 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-soft group-hover:scale-110 group-hover:bg-dropbox-blue group-hover:text-white transition-all duration-300">
-                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-dropbox-blue group-hover:text-white" />
+              <div className="absolute top-6 right-6 w-9 h-9 border border-white/10 rounded-full flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all duration-300">
+                <ArrowRight className="w-4 h-4 text-white group-hover:text-black" />
               </div>
               
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-soft mb-4 sm:mb-6 group-hover:rotate-12 group-hover:bg-dropbox-blue/10 group-hover:border-dropbox-blue/30 transition-transform duration-300">
-                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-dropbox-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 2L12 12L19 16" />
-                </svg>
+              <div className="w-10 h-10 border border-white/10 rounded flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300">
+                <span className="text-xs font-display text-white">01</span>
               </div>
               
-              <h3 className="font-display font-semibold text-xl sm:text-2xl text-white mb-1.5 sm:mb-2 group-hover:text-dropbox-blue transition-colors">
-                幸运转盘
+              <h3 className="font-display font-light text-lg sm:text-xl text-white mb-2 uppercase tracking-[0.18em] group-hover:text-white">
+                LUCKY WHEEL // 幸运转盘
               </h3>
-              <p className="text-sm sm:text-base text-dropbox-gray-400 group-hover:text-white/90 transition-colors">
-                自定义选项，旋转决定命运。支持等权重和差额权重，让转盘结果充满悬念。
+              <p className="text-xs text-neutral-400 leading-relaxed font-light">
+                水晶极简分段扇区，配置专属数值比例。每一次启动都将配合清脆拨片声及 major 9th 琶音中奖和弦。
               </p>
             </button>
 
             {/* Draw Card */}
             <button
               onClick={() => navigateTo('draw')}
-              className="group relative bg-[#0d1021]/60 backdrop-blur-md border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-left transition-all duration-500 hover:border-dropbox-accent-purple/40 hover:bg-[#121630]/70 hover:shadow-glow-purple hover:-translate-y-1.5 active:scale-[0.98] animate-fade-in-up"
+              className="group relative bg-[#060606]/65 border border-white/10 rounded-xl p-6 sm:p-10 transition-all duration-500 hover:border-white/30 hover:bg-[#0c0c0c]/85 active:scale-[0.99] animate-fade-in-up"
               style={{ animationDelay: '0.3s' }}
             >
-              <div className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 sm:w-12 sm:h-12 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-soft group-hover:scale-110 group-hover:bg-dropbox-accent-purple group-hover:text-white transition-all duration-300">
-                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-dropbox-accent-purple group-hover:text-white" />
+              <div className="absolute top-6 right-6 w-9 h-9 border border-white/10 rounded-full flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all duration-300">
+                <ArrowRight className="w-4 h-4 text-white group-hover:text-black" />
               </div>
               
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-soft mb-4 sm:mb-6 group-hover:rotate-12 group-hover:bg-dropbox-accent-purple/10 group-hover:border-dropbox-accent-purple/30 transition-transform duration-300">
-                <Dices className="w-6 h-6 sm:w-8 sm:h-8 text-dropbox-accent-purple" />
+              <div className="w-10 h-10 border border-white/10 rounded flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300">
+                <span className="text-xs font-display text-white">02</span>
               </div>
               
-              <h3 className="font-display font-semibold text-xl sm:text-2xl text-white mb-1.5 sm:mb-2 group-hover:text-dropbox-accent-purple transition-colors">
-                随机抽签
+              <h3 className="font-display font-light text-lg sm:text-xl text-white mb-2 uppercase tracking-[0.18em] group-hover:text-white">
+                RANDOM LOT // 随机抽签
               </h3>
-              <p className="text-sm sm:text-base text-dropbox-gray-400 group-hover:text-white/90 transition-colors">
-                从列表中随机抽取一个或多个结果。适用于抽奖、点名、分组等多种场景。
+              <p className="text-xs text-neutral-400 leading-relaxed font-light">
+                极具写照感的卡片反转揭晓。支持同时切出多张卡片，通过 Y 轴 180 度翻动打造高悬念的决策过程。
               </p>
             </button>
           </div>
         </div>
       </section>
 
-      {/* Features Section - 移动端优化 */}
-      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-[#070814]/40 border-t border-b border-white/5 relative z-10 backdrop-blur-md">
+      {/* Features Section */}
+      <section className="py-12 sm:py-24 px-4 sm:px-6 bg-[#040404]/50 border-t border-b border-white/5 relative z-10">
         <div className="max-w-5xl mx-auto">
-          <h2 className="font-display font-bold text-2xl sm:text-4xl text-white text-center mb-10 sm:mb-16">
-            为什么选择 LuckyDraw
+          <h2 className="font-display font-light text-xl sm:text-2xl text-white text-center mb-12 sm:mb-20 uppercase tracking-[0.25em]">
+            // THE ADVANTAGE // 我们的核心优势
           </h2>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
             {[
               {
-                icon: '✨',
-                title: '简单易用',
-                desc: '直观的操作界面，无需学习成本，开箱即用',
-                glow: 'hover:shadow-glow-blue border-dropbox-blue/10 hover:border-dropbox-blue/30'
+                icon: '01',
+                title: '纯粹交互',
+                desc: '鼠标划过激起银白粒子浮动，每一次点击与滑越皆有原生音效的高速合成回馈'
               },
               {
-                icon: '🎨',
-                title: '精美设计',
-                desc: '赛博玻璃拟态 UI 设计，流畅动画配合音感声响，带来极致愉悦体验',
-                glow: 'hover:shadow-glow-purple border-dropbox-accent-purple/10 hover:border-dropbox-accent-purple/30'
+                icon: '02',
+                title: '艺术美感',
+                desc: '抛弃杂乱霓虹，使用钛金黑、白银一像素线框与高纯文字，成就画卷级交互设计'
               },
               {
-                icon: '🔒',
-                title: '隐私保护',
-                desc: '所有数据保存在本地，无需注册，完全免费',
-                glow: 'hover:shadow-glow-pink border-dropbox-accent-pink/10 hover:border-dropbox-accent-pink/30'
+                icon: '03',
+                title: '完全本地',
+                desc: '无联网权限，数据永久缓存于用户的本机内存，安全私密，极致秒开'
               }
             ].map((feature, index) => (
               <div 
                 key={index} 
-                className={`text-center p-5 sm:p-8 bg-[#0d1021]/50 backdrop-blur-sm border rounded-2xl transition-all duration-300 hover:-translate-y-1 ${feature.glow} animate-fade-in-up`}
+                className="text-left p-6 sm:p-8 bg-[#060606]/35 border border-white/5 rounded transition-all duration-300 hover:border-white/15 animate-fade-in-up"
                 style={{ animationDelay: `${0.1 * index}s` }}
               >
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl shadow-soft flex items-center justify-center text-2xl sm:text-3xl mx-auto mb-3 sm:mb-4">
+                <div className="w-9 h-9 border border-white/10 rounded flex items-center justify-center text-xs text-white font-mono mb-4">
                   {feature.icon}
                 </div>
-                <h3 className="font-display font-semibold text-base sm:text-lg text-white mb-1.5 sm:mb-2">
+                <h3 className="font-display font-light text-sm text-white mb-2 uppercase tracking-widest">
                   {feature.title}
                 </h3>
-                <p className="text-sm sm:text-base text-dropbox-gray-400">
+                <p className="text-xs text-neutral-400 leading-relaxed font-light">
                   {feature.desc}
                 </p>
               </div>
@@ -280,38 +419,35 @@ function App() {
         </div>
       </section>
 
-      {/* Footer - 移动端优化 */}
-      <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t border-white/5 relative z-10 bg-[#030308]/60 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+      {/* Footer */}
+      <footer className="py-8 sm:py-16 px-4 sm:px-6 border-t border-white/5 relative z-10 bg-[#000000]/60 backdrop-blur-md">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-tr from-dropbox-blue to-dropbox-accent-purple rounded-md flex items-center justify-center">
-              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-            </div>
-            <span className="font-display font-medium text-white text-sm sm:text-base">
-              LuckyDraw
+            <span className="font-display font-light text-white text-sm tracking-[0.2em] uppercase">
+              LUCKYDRAW STUDIO
             </span>
           </div>
           
-          <p className="text-xs sm:text-sm text-dropbox-gray-400">
-            Made with <Heart className="w-3 h-3 sm:w-4 sm:h-4 inline text-dropbox-accent-pink animate-pulse-soft" /> by LuckyDraw Team
+          <p className="text-[10px] uppercase tracking-widest text-neutral-500">
+            AESTHETIC PORTFOLIO BY LUCKYDRAW TEAM
           </p>
           
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-4">
             <a 
               href="https://twitter.com" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-dropbox-gray-400 hover:text-white transition-colors"
+              className="text-neutral-400 hover:text-white transition-colors text-xs uppercase tracking-widest"
             >
-              <Twitter className="w-4 h-4 sm:w-5 sm:h-5 text-dropbox-blue" />
+              Twitter
             </a>
             <a 
               href="https://github.com/1850741061/lucky-draw" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-dropbox-gray-400 hover:text-white transition-colors"
+              className="text-neutral-400 hover:text-white transition-colors text-xs uppercase tracking-widest"
             >
-              <Github className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              GitHub
             </a>
           </div>
         </div>
