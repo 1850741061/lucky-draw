@@ -9,10 +9,16 @@ interface WheelOption {
   weight: number;
 }
 
-// Sophisticated art-minimalist luxury default colors (Monochrome/Slate/Brushed Metal)
+// Curated high-contrast art-gallery luxury default colors (Cohesive alternating desaturated palettes)
 const PRESET_COLORS = [
-  '#1b1c22', '#2a2b33', '#393a45', '#16171d',
-  '#2d313d', '#3f4556', '#4e556a', '#101115',
+  '#1b263b', // Deep Navy Blue (深邃靛蓝)
+  '#d8c3a5', // Champagne Sand (香槟暖沙)
+  '#5a6b5c', // Sophisticated Sage Green (雅致鼠尾草)
+  '#e9ecef', // Crisp Alabaster Silver (极简铂银)
+  '#c08a70', // Dusty Terracotta Rose (暮色陶土)
+  '#415a77', // Cold Slate Blue (冷淬钢蓝)
+  '#2e3033', // Basalt Charcoal (深曜火山灰)
+  '#c8b195', // Warm Gold Sand (流沙哑金)
 ];
 
 const DEFAULT_OPTIONS: WheelOption[] = [
@@ -231,11 +237,21 @@ export default function WheelPage({ onBack, isDarkMode, toggleTheme }: WheelPage
     ctx.fillStyle = isDarkMode ? '#08080c' : '#f1f1f5';
     ctx.fill();
 
-    // 2. Draw metallic outer ring wire border
+    // 2. Draw metallic outer ring wire border with gradient representing a physical polished bezel
     ctx.beginPath();
-    ctx.arc(centerX, centerY, outerRingRadius, 0, 2 * Math.PI);
-    ctx.strokeStyle = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
-    ctx.lineWidth = 2.5;
+    ctx.arc(centerX, centerY, outerRingRadius - 1.5, 0, 2 * Math.PI);
+    const borderGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    if (isDarkMode) {
+      borderGrad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+      borderGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.03)');
+      borderGrad.addColorStop(1, 'rgba(255, 255, 255, 0.22)');
+    } else {
+      borderGrad.addColorStop(0, 'rgba(0, 0, 0, 0.14)');
+      borderGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.02)');
+      borderGrad.addColorStop(1, 'rgba(0, 0, 0, 0.14)');
+    }
+    ctx.strokeStyle = borderGrad;
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     const totalWeight = options.reduce((sum, opt) => sum + opt.weight, 0);
@@ -251,11 +267,11 @@ export default function WheelPage({ onBack, isDarkMode, toggleTheme }: WheelPage
       ctx.arc(centerX, centerY, radius, currentAngle, endAngle);
       ctx.closePath();
 
-      // Premium brushed steel sectors fading outwards
+      // Premium brushed steel sectors fading outwards (dynamic edge shadow based on active theme)
       const sliceGrad = ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, radius);
-      sliceGrad.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+      sliceGrad.addColorStop(0, isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.35)');
       sliceGrad.addColorStop(0.35, option.color);
-      sliceGrad.addColorStop(1, adjustColorBrightness(option.color, -42));
+      sliceGrad.addColorStop(1, adjustColorBrightness(option.color, isDarkMode ? -35 : -18));
       
       ctx.fillStyle = sliceGrad;
       ctx.fill();
